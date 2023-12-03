@@ -44,7 +44,7 @@ app.get('/api/user/:uid', (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
   
-    const user = results[0]; // Assuming you want to send the first user found
+    const user = results[0]; 
     res.json(user);
   });
 });
@@ -52,7 +52,7 @@ app.get('/api/user/:uid', (req, res) => {
 const serviceAccount = require('/Users/jeremiahvelasco/Ruta-Backend/ruta-7c85f-firebase-adminsdk-4xpeh-9b412e70cf.json'); // Replace with your actual path
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://ruta-7c85f.firebaseio.com', // Replace with your Firebase project URL
+  databaseURL: 'https://ruta-7c85f.firebaseio.com',
 });
 
 //GET DRIVER DETAILS
@@ -112,7 +112,7 @@ app.post('/book', (req, res) => {
 
     const distanceToTerminal = geolib.getDistance(origin, terminal);
 
-    // Calculate pickUpFee
+    // PICKUP
     const baseFee = 10; // Php10 for the first km
     const additionalFeePerKm = 10; // Php10 for every additional km
     const distanceInKm = distanceToTerminal / 1000; // Convert distance to km
@@ -124,7 +124,7 @@ app.post('/book', (req, res) => {
       pickUpFee += additionalKm * additionalFeePerKm;
     }
 
-    // Calculate fare
+    // FARE
     const fareBaseFee = 10; // Php10 for the first km
     const fareAdditionalFeePerHalfKm = 5; // Php5 for every additional half km
   
@@ -189,20 +189,18 @@ io.on('connection', (socket) => {
   //ACCEPTED BOOKING
   socket.on('accept_booking', ({ driverId, bookingId, data }) => {
 
-    const {uid, status} = data;
+    const { status } = data;
 
     // Notify the passenger about the booking status change
     const passengerRoomId = hash(bookingId);
-    const passengerSocket = userSockets[data.uid]; 
 
-    if (passengerSocket) {
-      // Emit the 'booking_update' event to the passenger
-      passengerSocket.emit('booking_update', {
-        bookingId,
-        status: 'Accepted',
-        driverId,
-      });
-    }
+    // Emit the 'booking_update' event to the passenger based on bookingId
+    io.emit('booking_update', {
+      bookingId,
+      status: 'Accepted',
+      driverId,
+    });
+    
     console.log(`SERVER - Driver: ${driverId}`);
     console.log(`SERVER - Passenger Room ID: ${passengerRoomId}`);
     console.log(`SERVER - Booking ID: ${bookingId}`);
