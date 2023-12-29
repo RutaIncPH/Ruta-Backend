@@ -44,8 +44,8 @@ app.get('/api/user/:uid', (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
   
-    const user = results[0]; 
-    res.json(user);
+    const data = results[0]; 
+    res.json(data);
   });
 });
 
@@ -64,21 +64,18 @@ app.get('/api/driver/:uid', (req, res) => {
   }
 
   // Use a parameterized query to avoid SQL injection
-  const sql = 'SELECT * FROM drivers WHERE uid = ?';
-  db.query(sql, [uid], (err, results) => {
+  db.query('SELECT * FROM drivers WHERE uid = ?', [uid], (err, results) => {
     if (err) {
-      console.error('Error executing query:', err);
+      console.error('Error fetching user details:', err);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
-
+  
     if (results.length === 0) {
-      return res.status(404).json({ error: 'Driver not found' });
+      return res.status(404).json({ error: 'User not found' });
     }
-
-    const driver = results[0];
-    // Assuming you want to send only specific details, not all columns
-    const { uid, name, contact } = driver;
-    res.json({ uid, name, contact });
+  
+    const data = results[0]; 
+    res.json(data);
   });
 });
 
@@ -185,16 +182,24 @@ io.on('connection', (socket) => {
     }
   });
 
+  //USER CANCEL BOOKING
+  io.on('connection', (socket) => {
+    // Listen for the cancel_booking event
+    socket.on('cancel_booking', (data) => {
+      const { bookingId } = data;
+
+      io.emit('booking_cancelled', { bookingId });
+    });
+
+  });
 
   //ACCEPTED BOOKING
   socket.on('accept_booking', ({ driverId, bookingId, data }) => {
 
     const { status } = data;
 
-    // Notify the passenger about the booking status change
     const passengerRoomId = hash(bookingId);
 
-    // Emit the 'booking_update' event to the passenger based on bookingId
     io.emit('booking_update', {
       bookingId,
       status: 'Accepted',
@@ -207,12 +212,35 @@ io.on('connection', (socket) => {
     console.log(`SERVER - Status: ${status}`);
   });
 
+  //SKIPPED BOOKING
+  socket.on('skip_booking', ({ driverId, bookingId, data }) => {
+
+    const {uid, status} = data;
+  
+    const passengerSocket = userSockets[data.uid]; 
+  
+    if (passengerSocket) {
+      passengerSocket.emit('booking_update', {
+        bookingId,
+        status: 'Rejected',
+        driverId,
+      });
+    }
+    const passengerRoomId = hash(bookingId);
+    io.emit('booking_update', {
+      bookingId,
+      status: 'Rejected',
+      driverId,
+    });
+
+    console.log(`SERVER - Driver: ${driverId}`);
+    console.log(`SERVER - Passenger Room ID: ${passengerRoomId}`);
+    console.log(`SERVER - Booking ID: ${bookingId}`);
+    console.log(`SERVER - Status: ${status}`);
+  });
+
   //SUCCESSFUL BOOKING - PASSENGER DROPPED
   socket.on('success_booking', ({ bookingId }) => {
-    // Implement the logic to handle booking confirmation
-    // Update the database with the confirmed booking information
-
-    // Notify the passenger about the booking status change
     const passengerRoomId = hash(bookingId);
     io.to(passengerRoomId).emit('booking_update', {
       bookingId,
@@ -221,42 +249,15 @@ io.on('connection', (socket) => {
     });
   });
 
-  //SKIPPED BOOKING
-  socket.on('skip_booking', ({ driverId, bookingId, data }) => {
-
-    const {uid, status} = data;
-
-    // Notify the passenger about the booking status change
-    const passengerSocket = userSockets[data.uid]; 
-
-    if (passengerSocket) {
-      // Emit the 'booking_update' event to the passenger
-      passengerSocket.emit('booking_update', {
-        bookingId,
-        status: 'Rejected',
-        driverId,
-      });
-    }
-    const passengerRoomId = hash(bookingId);
-    io.to(passengerRoomId).emit('booking_update', {
-      bookingId,
-      status: 'Rejected',
-    });
-    console.log(`SERVER - Driver: ${driverId}`);
-    console.log(`SERVER - Passenger Room ID: ${passengerRoomId}`);
-    console.log(`SERVER - Booking ID: ${bookingId}`);
-    console.log(`SERVER - Status: ${status}`);
-  });
-
 
   // Disconnect event
   socket.on('disconnect', () => {
     console.log('A user disconnected');
-    // Additional cleanup or handling when a user disconnects
+    
   });
 });
 
-// Your existing server code
+
 server.listen(port, () => {
   console.log("Server is running on port: " + port);
 });

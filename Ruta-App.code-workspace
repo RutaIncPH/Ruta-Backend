@@ -1,14 +1,17 @@
 {
-	"folders": [
-		{
-			"path": "../Ruta-Driver"
-		},
-		{
-			"path": "../Ruta"
-		},
-		{
-			"path": "."
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "path": "../Ruta-Driver"
+    },
+    {
+      "path": "../Ruta"
+    },
+    {
+      "path": "."
+    },
+    {
+      "path": "../ruta-admin"
+    }
+  ],
+  "settings": {}
 }
